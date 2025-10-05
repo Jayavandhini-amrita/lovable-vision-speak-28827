@@ -1,0 +1,201 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    --background: 220 25% 97%;
+    --foreground: 220 15% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 15%;
+
+    --primary: 250 70% 55%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 260 80% 65%;
+
+    --secondary: 210 60% 50%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 15% 92%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 280 65% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 85% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 145 65% 50%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 40 90% 55%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 220 20% 88%;
+    --input: 220 20% 88%;
+    --ring: 250 70% 55%;
+
+    --radius: 0.75rem;
+
+    /* AI Theme Colors */
+    --ai-active: 280 75% 58%;
+    --ai-processing: 260 70% 60%;
+    --detection-box: 145 65% 50%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(250 70% 55%), hsl(260 80% 65%));
+    --gradient-accent: linear-gradient(135deg, hsl(280 65% 60%), hsl(290 70% 65%));
+    --gradient-surface: linear-gradient(180deg, hsl(220 25% 97%), hsl(220 20% 95%));
+    
+    /* Shadows */
+    --shadow-elegant: 0 10px 40px -12px hsl(250 70% 55% / 0.25);
+    --shadow-active: 0 0 30px hsl(280 75% 58% / 0.4);
+    --shadow-card: 0 2px 8px hsl(220 15% 15% / 0.08);
+    
+    /* Animations */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-spring: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .dark {
+    --background: 220 25% 8%;
+    --foreground: 220 15% 92%;
+
+    --card: 220 20% 12%;
+    --card-foreground: 220 15% 92%;
+
+    --popover: 220 20% 12%;
+    --popover-foreground: 220 15% 92%;
+
+    --primary: 250 70% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 260 80% 70%;
+
+    --secondary: 210 55% 55%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 220 20% 18%;
+    --muted-foreground: 220 10% 60%;
+
+    --accent: 280 65% 65%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 75% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 145 60% 50%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 40 85% 55%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 220 20% 22%;
+    --input: 220 20% 22%;
+    --ring: 250 70% 60%;
+
+    /* AI Theme Colors */
+    --ai-active: 280 75% 62%;
+    --ai-processing: 260 70% 65%;
+    --detection-box: 145 65% 55%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(250 70% 60%), hsl(260 80% 70%));
+    --gradient-accent: linear-gradient(135deg, hsl(280 65% 65%), hsl(290 70% 70%));
+    --gradient-surface: linear-gradient(180deg, hsl(220 25% 8%), hsl(220 20% 10%));
+    
+    /* Shadows */
+    --shadow-elegant: 0 10px 40px -12px hsl(250 70% 60% / 0.4);
+    --shadow-active: 0 0 30px hsl(280 75% 62% / 0.5);
+    --shadow-card: 0 2px 12px hsl(0 0% 0% / 0.3);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    background: var(--gradient-surface);
+  }
+}
+
+@layer utilities {
+  .status-indicator {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium;
+  }
+  
+  .status-indicator.loading {
+    @apply bg-muted text-muted-foreground;
+  }
+  
+  .status-indicator.active {
+    color: white;
+    background: hsl(var(--success));
+    box-shadow: 0 0 20px hsl(var(--success) / 0.3);
+  }
+  
+  .status-indicator.recording {
+    @apply text-accent-foreground animate-pulse;
+    background: hsl(var(--ai-active));
+    box-shadow: var(--shadow-active);
+  }
+  
+  .status-indicator.processing {
+    @apply text-primary-foreground animate-pulse;
+    background: hsl(var(--ai-processing));
+  }
+  
+  .glass-panel {
+    @apply bg-card/80 backdrop-blur-xl border border-border rounded-xl shadow-lg;
+  }
+  
+  .ai-button {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium;
+    @apply transition-all duration-300 hover:scale-105 active:scale-95;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
+  }
+  
+  .ai-button.primary {
+    @apply text-primary-foreground;
+    background: var(--gradient-primary);
+    box-shadow: var(--shadow-elegant);
+  }
+  
+  .ai-button.secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/90;
+  }
+  
+  .ai-button.icon {
+    @apply w-10 h-10 p-0;
+  }
+  
+  .detection-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+  }
+  
+  @keyframes pulse-ring {
+    0%, 100% {
+      box-shadow: 0 0 0 0 hsl(var(--ai-active) / 0.7);
+    }
+    50% {
+      box-shadow: 0 0 0 10px hsl(var(--ai-active) / 0);
+    }
+  }
+  
+  .pulse-ring {
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
