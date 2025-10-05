@@ -8,7 +8,9 @@ import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { Input } from '@/components/ui/input';
 import { UserPreferences } from '@/hooks/useUserPreferences';
+import { toast } from 'sonner';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -18,27 +20,38 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal = ({ isOpen, onClose, preferences, onSave }: SettingsModalProps) => {
+  const [userId, setUserId] = useState(preferences.user_id);
   const [ttsSpeed, setTtsSpeed] = useState(preferences.tts_speed);
   const [announcementInterval, setAnnouncementInterval] = useState(preferences.announcement_interval);
   const [priorityMode, setPriorityMode] = useState(preferences.priority_mode);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    setUserId(preferences.user_id);
     setTtsSpeed(preferences.tts_speed);
     setAnnouncementInterval(preferences.announcement_interval);
     setPriorityMode(preferences.priority_mode);
   }, [preferences]);
 
   const handleSave = async () => {
+    if (!userId.trim()) {
+      toast.error('User ID cannot be empty');
+      return;
+    }
+
     setIsSaving(true);
     const success = await onSave({
+      user_id: userId.trim(),
       tts_speed: ttsSpeed,
       announcement_interval: announcementInterval,
       priority_mode: priorityMode,
     });
     setIsSaving(false);
     if (success) {
+      toast.success('Settings saved to Azure SQL');
       onClose();
+    } else {
+      toast.error('Failed to save settings');
     }
   };
 
@@ -58,6 +71,24 @@ export const SettingsModal = ({ isOpen, onClose, preferences, onSave }: Settings
           >
             <X className="w-5 h-5" />
           </Button>
+        </div>
+
+        {/* User ID */}
+        <div className="space-y-2">
+          <Label htmlFor="user-id" className="text-sm font-medium">
+            User ID
+          </Label>
+          <Input
+            id="user-id"
+            type="text"
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+            placeholder="Enter your user ID"
+            className="w-full"
+          />
+          <p className="text-xs text-muted-foreground">
+            Your unique identifier for storing preferences in Azure SQL
+          </p>
         </div>
 
         {/* TTS Speed */}

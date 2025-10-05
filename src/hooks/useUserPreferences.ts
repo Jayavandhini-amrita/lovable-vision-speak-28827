@@ -19,7 +19,8 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   user_id: 'default_user',
 };
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+// Backend URL - configured via deployment
+const API_BASE_URL = '';
 
 export function useUserPreferences() {
   const [preferences, setPreferences] = useState<UserPreferences>(DEFAULT_PREFERENCES);
@@ -29,10 +30,13 @@ export function useUserPreferences() {
   /**
    * Load preferences from backend
    */
-  const loadPreferences = useCallback(async () => {
+  const loadPreferences = useCallback(async (userId?: string) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`${API_BASE_URL}/api/preferences`, {
+      const userIdParam = userId || preferences.user_id;
+      const url = `${API_BASE_URL}/api/preferences?user_id=${encodeURIComponent(userIdParam)}`;
+      
+      const response = await fetch(url, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -52,7 +56,7 @@ export function useUserPreferences() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [preferences.user_id]);
 
   /**
    * Save preferences to backend
@@ -71,9 +75,10 @@ export function useUserPreferences() {
         throw new Error('Failed to save preferences');
       }
 
-      setPreferences(updated);
+      const result = await response.json();
+      setPreferences(result.preferences);
       setError(null);
-      console.log('✅ User preferences saved:', updated);
+      console.log('✅ User preferences saved:', result.preferences);
       return true;
     } catch (err) {
       console.error('❌ Failed to save preferences:', err);

@@ -11,10 +11,12 @@ import { useSpeech } from '@/hooks/useSpeech';
 import { useTTSQueue } from '@/hooks/useTTSQueue';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useMicControls } from '@/hooks/useMicControls';
+import { useAprilTagDetection } from '@/hooks/useAprilTagDetection';
 import { getDynamicPriority } from '@/utils/detectionPriority';
+import { NavigationInstruction } from '@/utils/apriltagDetection';
 import { sendVQARequest } from '@/lib/api-utils';
 import { toast } from 'sonner';
-import { Mic, Settings } from 'lucide-react';
+import { Mic, Settings, Navigation } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SettingsModal } from '@/components/SettingsModal';
 
@@ -45,6 +47,18 @@ const Index = () => {
 
   // Priority TTS Queue
   const ttsQueue = useTTSQueue();
+
+  // AprilTag Navigation
+  const aprilTag = useAprilTagDetection({
+    enabled: true,
+    onNavigationInstruction: (instruction: NavigationInstruction) => {
+      if (!muteTTS) {
+        console.log('[NAV] AprilTag instruction:', instruction.instruction);
+        ttsQueue.enqueue(instruction.instruction, instruction.priority);
+      }
+    },
+    announcementInterval: preferences.announcement_interval,
+  });
 
   // Initialize speech on mount and configure TTS queue
   useEffect(() => {
@@ -81,6 +95,20 @@ const Index = () => {
     }
   }, [preferences.tts_speed, ttsQueue]);
 
+  // Process AprilTag detection
+  useEffect(() => {
+    if (!aprilTag.navigationMode) return;
+
+    const processInterval = setInterval(() => {
+      const video = document.querySelector('video');
+      if (video) {
+        aprilTag.processFrame(video);
+      }
+    }, 500);
+
+    return () => clearInterval(processInterval);
+  }, [aprilTag.navigationMode]);
+
   const handleModelLoaded = () => {
     setModelLoaded(true);
     setCameraActive(true);
@@ -95,14 +123,26 @@ const Index = () => {
    * Handle detections from YOLO model - announce via priority TTS queue
    */
   const handleDetections = (detections: Detection[]) => {
-    if (muteTTS || !speechInitialized) return;
+    if (muteTTS || !speechInitialized || !tokenRef.current) {
+      return;
+    }
 
     const now = Date.now();
     const video = document.querySelector('video');
-    if (!video) return;
+    if (!video) {
+      console.warn('[DETECTIONS] Video element not found');
+      return;
+    }
 
     const videoWidth = video.videoWidth;
     const videoHeight = video.videoHeight;
+
+    if (videoWidth === 0 || videoHeight === 0) {
+      console.warn('[DETECTIONS] Video dimensions not ready');
+      return;
+    }
+
+    console.log(`[DETECTIONS] Processing ${detections.length} objects`);
 
     detections.forEach((detection) => {
       const { priority, instruction } = getDynamicPriority(detection, videoWidth, videoHeight);
@@ -121,6 +161,7 @@ const Index = () => {
       lastAnnouncedRef.current.set(key, now);
 
       // Enqueue with dynamic priority
+      console.log(`[TTS ENQUEUE] ${instruction} (Priority: ${priority})`);
       ttsQueue.enqueue(instruction, priority);
     });
   };
@@ -184,6 +225,15 @@ const Index = () => {
     toast.info(muteTTS ? 'TTS enabled' : 'TTS muted');
   };
 
+  const handleToggleNavigation = () => {
+    aprilTag.toggleNavigation();
+    toast.info(
+      aprilTag.navigationMode 
+        ? 'Navigation mode disabled' 
+        : 'Navigation mode enabled - AprilTag guidance active'
+    );
+  };
+
   // Mic controls (Space bar / Double-tap)
   useMicControls({
     onActivate: handleStartListening,
@@ -191,7 +241,7 @@ const Index = () => {
   });
 
   return (
-    <div className="min-h-screen w-full flex flex-col p-2 sm:p-4 gap-2 sm:gap-4 relative">
+    <div className="min-h-screen w-full flex flex-col p-2 sm:p-4 gap-2 sm:gap-4 relative pb-24 sm:pb-4">
       {/* Settings Modal */}
       <SettingsModal
         isOpen={showSettings}
@@ -212,31 +262,57 @@ const Index = () => {
         className="fixed top-20 right-4 hidden sm:flex ai-button secondary z-50"
         onClick={() => setShowSettings(true)}
         size="icon"
+        aria-label="Settings"
       >
         <Settings className="w-5 h-5" />
       </Button>
 
+      {/* Navigation Mode Button (Desktop) */}
+      <Button
+        className={`fixed top-36 right-4 hidden sm:flex z-50 ${
+          aprilTag.navigationMode ? 'ai-button primary' : 'ai-button secondary'
+        }`}
+        onClick={handleToggleNavigation}
+        size="icon"
+        aria-label="Toggle navigation mode"
+      >
+        <Navigation className={`w-5 h-5 ${aprilTag.navigationMode ? 'animate-pulse' : ''}`} />
+      </Button>
+
       {/* Floating Mic Button (Mobile) */}
       <Button
-        className="fixed bottom-20 right-4 sm:hidden w-14 h-14 rounded-full shadow-xl z-50 ai-button primary"
+        className="fixed bottom-6 right-6 sm:hidden w-16 h-16 rounded-full shadow-2xl z-50 ai-button primary flex items-center justify-center"
         onClick={handleStartListening}
         disabled={isListening || isProcessing}
+        aria-label="Start voice input"
       >
-        <Mic className={`w-6 h-6 ${isListening ? 'animate-pulse' : ''}`} />
+        <Mic className={`w-7 h-7 ${isListening ? 'animate-pulse' : ''}`} />
+      </Button>
+
+      {/* Navigation Button (Mobile) */}
+      <Button
+        className={`fixed bottom-24 right-6 sm:hidden w-14 h-14 rounded-full shadow-2xl z-50 flex items-center justify-center ${
+          aprilTag.navigationMode ? 'ai-button primary' : 'ai-button secondary'
+        }`}
+        onClick={handleToggleNavigation}
+        aria-label="Toggle navigation"
+      >
+        <Navigation className={`w-6 h-6 ${aprilTag.navigationMode ? 'animate-pulse' : ''}`} />
       </Button>
 
       {/* Settings Button (Mobile) */}
       <Button
-        className="fixed bottom-20 left-4 sm:hidden w-14 h-14 rounded-full shadow-xl z-50 ai-button secondary"
+        className="fixed bottom-6 left-6 sm:hidden w-16 h-16 rounded-full shadow-2xl z-50 ai-button secondary flex items-center justify-center"
         onClick={() => setShowSettings(true)}
+        aria-label="Open settings"
       >
-        <Settings className="w-6 h-6" />
+        <Settings className="w-7 h-7" />
       </Button>
 
       {/* Main Content */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-2 sm:gap-4">
         {/* Camera Feed - Takes 2/3 on desktop */}
-        <div className="lg:col-span-2 glass-panel p-2 sm:p-4">
+        <div className="lg:col-span-2 glass-panel p-2 sm:p-4 h-[40vh] sm:h-auto">
           <div className="relative w-full h-full min-h-[300px] sm:min-h-[400px] lg:min-h-[600px]">
             <CameraCanvas
               modelPath="/models/yolo11n/model.json"
@@ -248,7 +324,7 @@ const Index = () => {
         </div>
 
         {/* VQA Controls - Takes 1/3 on desktop */}
-        <div className="glass-panel overflow-hidden flex flex-col min-h-[400px] sm:min-h-[500px] lg:min-h-[600px]">
+        <div className="glass-panel overflow-hidden flex flex-col h-[45vh] sm:min-h-[500px] lg:min-h-[600px]">
           <VQAControls
             onAskQuestion={handleAskQuestion}
             onStartListening={handleStartListening}
@@ -263,12 +339,13 @@ const Index = () => {
       </div>
 
       {/* Footer Info */}
-      <div className="text-center text-xs sm:text-sm text-muted-foreground px-2">
+      <div className="text-center text-xs sm:text-sm text-muted-foreground px-2 pb-2">
         <p className="mb-1">
-          Real-time object detection • Priority TTS • Voice I/O • VQA with BLIP
+          Real-time object detection • AprilTag navigation • Priority TTS • Voice I/O • VQA with BLIP
         </p>
         <p className="text-[10px] sm:text-xs opacity-70">
-          🎤 Space bar or double-tap to speak
+          🎤 Space bar or double-tap to speak • 🧭 Navigation mode: {aprilTag.navigationMode ? 'ON' : 'OFF'}
+          {aprilTag.detectedTags.length > 0 && ` • ${aprilTag.detectedTags.length} tag(s) detected`}
         </p>
       </div>
     </div>

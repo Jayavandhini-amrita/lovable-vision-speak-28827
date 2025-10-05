@@ -3,7 +3,8 @@
  * Handles token fetching and VQA requests
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+// Backend URL - should be configured during deployment
+const API_BASE_URL = '';
 
 export interface SpeechToken {
   token: string;
